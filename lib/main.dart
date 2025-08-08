@@ -5,17 +5,17 @@ import 'package:wakelock_plus/wakelock_plus.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
-  runApp(const BofireApp());
+  runApp(const BonfireApp());
 }
 
-class BofireApp extends StatelessWidget {
-  const BofireApp({super.key});
+class BonfireApp extends StatelessWidget {
+  const BonfireApp({super.key});
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
-      title: 'Bofire',
+      title: 'Bonfire',
       theme: ThemeData.dark().copyWith(
         scaffoldBackgroundColor: const Color(0xFF0B0F18),
       ),
@@ -270,7 +270,7 @@ class _CampfireScreenState extends State<CampfireScreen>
                     ),
                     const SizedBox(height: 8),
                     const Text(
-                      'Bofire',
+                      'Bonfire',
                       style: TextStyle(
                         color: Colors.white,
                         fontSize: 16,
