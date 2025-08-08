@@ -37,10 +37,13 @@ class _CampfireScreenState extends State<CampfireScreen>
   late final AnimationController _flameController; // 炎強度 0..1
   late final AudioPlayer _player;
   double _currentVolume = 0.0;
+  double _userVolume = 0.6; // ユーザー設定音量(0.0-1.0)
+  bool _isUnlimited = false; // 無制限モード
 
   Duration _remaining = Duration.zero;
   DateTime? _endAt;
-  bool get _isTimerRunning => _endAt != null && _remaining > Duration.zero;
+  bool get _isTimerRunning =>
+      _isUnlimited || (_endAt != null && _remaining > Duration.zero);
 
   @override
   void initState() {
@@ -76,7 +79,7 @@ class _CampfireScreenState extends State<CampfireScreen>
       const steps = 20;
       for (int i = 0; i <= steps; i++) {
         await Future.delayed(const Duration(milliseconds: 40));
-        _currentVolume = i / steps * 0.6;
+        _currentVolume = (_userVolume * i / steps);
         await _player.setVolume(_currentVolume);
       }
     } catch (_) {}
@@ -96,6 +99,7 @@ class _CampfireScreenState extends State<CampfireScreen>
   }
 
   void _startTimer(Duration duration) async {
+    _isUnlimited = false;
     _endAt = DateTime.now().add(duration);
     setState(() {
       _remaining = duration;
@@ -117,8 +121,31 @@ class _CampfireScreenState extends State<CampfireScreen>
     _tickTimer();
   }
 
+  Future<void> _startUnlimited() async {
+    _isUnlimited = true;
+    _endAt = null;
+    setState(() {
+      _remaining = Duration.zero;
+    });
+    // 炎オン（フェードイン）
+    _flameController.value = 0.001;
+    setState(() {});
+    await _flameController.animateTo(
+      1.0,
+      duration: const Duration(milliseconds: 700),
+      curve: Curves.easeOut,
+    );
+    // サウンド
+    await _playAudioFadeIn();
+    // 画面スリープ防止
+    try {
+      await WakelockPlus.enable();
+    } catch (_) {}
+  }
+
   void _cancelTimerAndExtinguish() async {
     _endAt = null;
+    _isUnlimited = false;
     setState(() {
       _remaining = Duration.zero;
     });
@@ -224,7 +251,11 @@ class _CampfireScreenState extends State<CampfireScreen>
                       builder: (context, _) {
                         final on = _flameController.value > 0.0;
                         return Text(
-                          on ? _formatDuration(_remaining) : '00:00',
+                          on
+                              ? (_isUnlimited
+                                  ? '∞'
+                                  : _formatDuration(_remaining))
+                              : '00:00',
                           textAlign: TextAlign.center,
                           style: TextStyle(
                             color: Colors.white.withOpacity(0.9),
@@ -234,10 +265,53 @@ class _CampfireScreenState extends State<CampfireScreen>
                         );
                       },
                     ),
-                    const SizedBox(height: 10),
-                    // プリセットボタン
+                    const SizedBox(height: 8),
+                    // 音量スライダー
                     Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Icon(
+                          Icons.volume_down,
+                          color: Colors.white70,
+                          size: 20,
+                        ),
+                        Expanded(
+                          child: Slider(
+                            value: _userVolume,
+                            onChanged: (v) async {
+                              setState(() {
+                                _userVolume = v;
+                              });
+                              if (_player.state == PlayerState.playing) {
+                                _currentVolume = _userVolume;
+                                await _player.setVolume(_userVolume);
+                              }
+                            },
+                            min: 0.0,
+                            max: 1.0,
+                          ),
+                        ),
+                        const Icon(
+                          Icons.volume_up,
+                          color: Colors.white70,
+                          size: 20,
+                        ),
+                        const SizedBox(width: 8),
+                        SizedBox(
+                          width: 40,
+                          child: Text(
+                            '${(_userVolume * 100).round()}',
+                            textAlign: TextAlign.right,
+                            style: const TextStyle(color: Colors.white70),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 10),
+                    // プリセット + 任意 + 無制限
+                    Wrap(
+                      alignment: WrapAlignment.center,
+                      spacing: 10,
+                      runSpacing: 8,
                       children: [
                         _TimeButton(
                           label: '5分',
@@ -245,21 +319,33 @@ class _CampfireScreenState extends State<CampfireScreen>
                               () => _startTimer(const Duration(minutes: 5)),
                           enabled: !_isTimerRunning,
                         ),
-                        const SizedBox(width: 10),
                         _TimeButton(
                           label: '10分',
                           onPressed:
                               () => _startTimer(const Duration(minutes: 10)),
                           enabled: !_isTimerRunning,
                         ),
-                        const SizedBox(width: 10),
                         _TimeButton(
                           label: '15分',
                           onPressed:
                               () => _startTimer(const Duration(minutes: 15)),
                           enabled: !_isTimerRunning,
                         ),
-                        const SizedBox(width: 10),
+                        _TimeButton(
+                          label: '任意',
+                          onPressed: () async {
+                            final d = await _pickCustomDuration(context);
+                            if (d != null && d > Duration.zero) {
+                              _startTimer(d);
+                            }
+                          },
+                          enabled: !_isTimerRunning,
+                        ),
+                        _TimeButton(
+                          label: '無制限',
+                          onPressed: _startUnlimited,
+                          enabled: !_isTimerRunning,
+                        ),
                         _StopButton(
                           onPressed:
                               _isTimerRunning
@@ -267,15 +353,6 @@ class _CampfireScreenState extends State<CampfireScreen>
                                   : null,
                         ),
                       ],
-                    ),
-                    const SizedBox(height: 8),
-                    const Text(
-                      'Bonfire',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
-                      ),
                     ),
                   ],
                 ),
@@ -497,4 +574,73 @@ class _CampfirePainter extends CustomPainter {
   @override
   bool shouldRepaint(covariant _CampfirePainter oldDelegate) =>
       oldDelegate.t != t || oldDelegate.factor != factor;
+}
+
+Future<Duration?> _pickCustomDuration(BuildContext context) async {
+  final minutesController = TextEditingController();
+  final secondsController = TextEditingController(text: '00');
+  Duration? result;
+  await showDialog(
+    context: context,
+    builder: (ctx) {
+      return AlertDialog(
+        backgroundColor: const Color(0xFF111827),
+        title: const Text('任意の時間', style: TextStyle(color: Colors.white)),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Row(
+              children: [
+                Expanded(
+                  child: TextField(
+                    controller: minutesController,
+                    keyboardType: TextInputType.number,
+                    decoration: const InputDecoration(
+                      labelText: '分',
+                      labelStyle: TextStyle(color: Colors.white70),
+                    ),
+                    style: const TextStyle(color: Colors.white),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: TextField(
+                    controller: secondsController,
+                    keyboardType: TextInputType.number,
+                    decoration: const InputDecoration(
+                      labelText: '秒',
+                      labelStyle: TextStyle(color: Colors.white70),
+                    ),
+                    style: const TextStyle(color: Colors.white),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: const Text('キャンセル'),
+          ),
+          TextButton(
+            onPressed: () {
+              final m = int.tryParse(minutesController.text.trim());
+              final s = int.tryParse(secondsController.text.trim());
+              if (m == null && s == null) {
+                Navigator.of(ctx).pop();
+                return;
+              }
+              final mm = (m ?? 0).clamp(0, 9999);
+              final ss = (s ?? 0).clamp(0, 59);
+              result = Duration(minutes: mm, seconds: ss);
+              Navigator.of(ctx).pop();
+            },
+            child: const Text('開始'),
+          ),
+        ],
+      );
+    },
+  );
+  return result;
 }
