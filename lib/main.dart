@@ -100,9 +100,14 @@ class _CampfireScreenState extends State<CampfireScreen>
     setState(() {
       _remaining = duration;
     });
-    // 炎オン（即時表示）
-    _flameController.value = 1.0;
+    // 炎オン（フェードイン開始）
+    _flameController.value = 0.001; // 最低限の描画を即時開始
     setState(() {});
+    await _flameController.animateTo(
+      1.0,
+      duration: const Duration(milliseconds: 700),
+      curve: Curves.easeOut,
+    );
     // サウンド
     await _playAudioFadeIn();
     // 画面スリープ防止（失敗しても続行）
@@ -457,7 +462,7 @@ class _CampfirePainter extends CustomPainter {
     );
     drawFlameLayer(
       baseRadius: 30,
-      color: const Color(0xFFFFF2CC),
+      color: const Color.fromARGB(255, 255, 249, 236),
       yOffset: 42 + flicker(2.3, 3) * factor,
       noiseScale: 5,
       squeeze: 1.2,
@@ -476,16 +481,17 @@ class _CampfirePainter extends CustomPainter {
     }
 
     // グロー
+    final glowCenter = center.translate(0, -40); // 少し上に
     final glowPaint =
         Paint()
           ..shader = RadialGradient(
             colors: [
-              const Color(0xFFFF7A1A).withOpacity(0.25 * factor),
+              const Color(0xFFFF7A1A).withOpacity(0.45 * factor),
               Colors.transparent,
             ],
             stops: const [0.0, 1.0],
-          ).createShader(Rect.fromCircle(center: center, radius: 180));
-    canvas.drawCircle(center, 180, glowPaint);
+          ).createShader(Rect.fromCircle(center: glowCenter, radius: 180));
+    canvas.drawCircle(glowCenter, 180, glowPaint);
   }
 
   @override
