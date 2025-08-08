@@ -16,9 +16,7 @@ class BonfireApp extends StatelessWidget {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
       title: 'Bonfire',
-      theme: ThemeData.dark().copyWith(
-        scaffoldBackgroundColor: const Color(0xFF0B0F18),
-      ),
+      theme: ThemeData.dark().copyWith(scaffoldBackgroundColor: Colors.black),
       home: const CampfireScreen(),
     );
   }
@@ -295,15 +293,6 @@ class _CampfireScreenState extends State<CampfireScreen>
                           color: Colors.white70,
                           size: 20,
                         ),
-                        const SizedBox(width: 8),
-                        SizedBox(
-                          width: 40,
-                          child: Text(
-                            '${(_userVolume * 100).round()}',
-                            textAlign: TextAlign.right,
-                            style: const TextStyle(color: Colors.white70),
-                          ),
-                        ),
                       ],
                     ),
                     const SizedBox(height: 10),
@@ -380,7 +369,7 @@ class _TimeButton extends StatelessWidget {
     return ElevatedButton(
       onPressed: enabled ? onPressed : null,
       style: ElevatedButton.styleFrom(
-        backgroundColor: const Color(0xFF233046),
+        backgroundColor: Colors.black,
         foregroundColor: Colors.white,
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
       ),
@@ -417,7 +406,7 @@ class _StarrySkyBackground extends StatelessWidget {
           (rect) => const LinearGradient(
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
-            colors: [Color(0xFF0B0F18), Color(0xFF03060B)],
+            colors: [Colors.black, Colors.black],
           ).createShader(rect),
       blendMode: BlendMode.srcATop,
       child: CustomPaint(
@@ -433,7 +422,7 @@ class _StarsPainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
-    final bg = Paint()..color = const Color(0xFF00040A);
+    final bg = Paint()..color = Colors.black;
     canvas.drawRect(Offset.zero & size, bg);
 
     final starPaint = Paint()..color = Colors.white.withOpacity(0.9);
@@ -584,7 +573,7 @@ Future<Duration?> _pickCustomDuration(BuildContext context) async {
     context: context,
     builder: (ctx) {
       return AlertDialog(
-        backgroundColor: const Color(0xFF111827),
+        backgroundColor: Colors.black,
         title: const Text('任意の時間', style: TextStyle(color: Colors.white)),
         content: Column(
           mainAxisSize: MainAxisSize.min,
