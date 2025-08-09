@@ -321,26 +321,37 @@ class _CampfireScreenState extends State<CampfireScreen>
               children: [
                 _SheetButton(
                   label: '5分',
-                  onTap: () => _startTimer(const Duration(minutes: 5)),
+                  onTap: () {
+                    Navigator.of(bctx).pop();
+                    _startTimer(const Duration(minutes: 5));
+                  },
                 ),
                 _SheetButton(
                   label: '10分',
-                  onTap: () => _startTimer(const Duration(minutes: 10)),
+                  onTap: () {
+                    Navigator.of(bctx).pop();
+                    _startTimer(const Duration(minutes: 10));
+                  },
                 ),
                 _SheetButton(
                   label: '15分',
-                  onTap: () => _startTimer(const Duration(minutes: 15)),
+                  onTap: () {
+                    Navigator.of(bctx).pop();
+                    _startTimer(const Duration(minutes: 15));
+                  },
                 ),
                 _SheetButton(
                   label: '任意',
                   onTap: () async {
-                    final d = await _pickCustomDuration(bctx);
+                    Navigator.of(bctx).pop();
+                    // シートを閉じてから任意入力を表示
+                    await Future.delayed(const Duration(milliseconds: 50));
+                    final d = await _pickCustomDuration(context);
                     if (d != null && d > Duration.zero) {
                       _startTimer(d);
                     }
                   },
                 ),
-                _SheetButton(label: '無制限', onTap: _startUnlimited),
                 _SheetButton(
                   label: '閉じる',
                   onTap: () => Navigator.of(bctx).pop(),
@@ -351,6 +362,9 @@ class _CampfireScreenState extends State<CampfireScreen>
         );
       },
     );
+    if (!mounted) return;
+    // 念のためUIを再描画（ボトムシート閉鎖後にコントロールが確実に再表示されるように）
+    setState(() {});
   }
 }
 
@@ -402,6 +416,8 @@ class _CampfirePainter extends CustomPainter {
     }) {
       final path = Path();
       final segments = 24;
+      double? sx, sy; // 始点（左端）
+      double? ex, ey; // 終点（右端）
       for (int i = 0; i <= segments; i++) {
         final angle = (i / segments) * math.pi; // 半円
         final n = flicker(i * 0.37, noiseScale) * factor;
@@ -413,13 +429,32 @@ class _CampfirePainter extends CustomPainter {
         final y = center.dy - yOffset - math.sin(angle) * (radius * 1.6);
         if (i == 0) {
           path.moveTo(x, y);
+          sx = x;
+          sy = y;
         } else {
           path.lineTo(x, y);
         }
+        if (i == segments) {
+          ex = x;
+          ey = y;
+        }
       }
-      path.close();
-      final innerBase = Color.lerp(Colors.white, color, 0.35)!;
-      final innerOpacity = (0.85 * factor + 0.25).clamp(0.0, 1.0);
+      // 下辺を2段のベジェでスムーズに丸める
+      final midBottom = center.translate(0, (baseRadius * 0.65) - yOffset);
+      if (sx != null && sy != null && ex != null && ey != null) {
+        // 右端→中央（コントロールは右端と中央の間を深めに）
+        final c1x = ex + (midBottom.dx - ex) * 0.4;
+        final c1y = ey + (midBottom.dy - ey) * 0.9;
+        path.quadraticBezierTo(c1x, c1y, midBottom.dx, midBottom.dy);
+        // 中央→左端（コントロールは左端へ向けて対称配置）
+        final c2x = sx + (midBottom.dx - sx) * 0.4;
+        final c2y = sy + (midBottom.dy - sy) * 0.9;
+        path.quadraticBezierTo(c2x, c2y, sx, sy);
+      } else {
+        path.close();
+      }
+      final innerBase = Color.lerp(Colors.white, color, 0.2)!;
+      final innerOpacity = (0.9 * factor + 0.35).clamp(0.0, 1.0);
       final outerOpacity = (0.35 * factor + 0.15).clamp(0.0, 1.0);
       final inner = innerBase.withOpacity(innerOpacity);
       final outer = color.withOpacity(outerOpacity);
@@ -467,6 +502,23 @@ class _CampfirePainter extends CustomPainter {
       noiseScale: 5,
       squeeze: 1.2,
     );
+
+    // 中心のホットコア（白く強い発光）
+    final coreCenter = center.translate(0, -38);
+    final coreRadius = 28 * (0.8 + 0.2 * factor);
+    final corePaint =
+        Paint()
+          ..shader = RadialGradient(
+            colors: [
+              Colors.white.withOpacity(0.95 * factor),
+              Colors.white.withOpacity(0.0),
+            ],
+            stops: const [0.0, 1.0],
+          ).createShader(
+            Rect.fromCircle(center: coreCenter, radius: coreRadius),
+          )
+          ..blendMode = BlendMode.plus;
+    canvas.drawCircle(coreCenter, coreRadius, corePaint);
 
     // 火の粉
     final spark =
@@ -614,9 +666,11 @@ class _FireToggleButton extends StatelessWidget {
       label: Text(isOn ? '火を消す' : '火をつける'),
       style: ElevatedButton.styleFrom(
         backgroundColor:
-            isOn ? const Color(0xFF5A2A2A) : const Color(0xFF1E3A1A),
+            isOn
+                ? const Color(0xFF5A2A2A)
+                : const Color.fromARGB(255, 58, 35, 26),
         foregroundColor: Colors.white,
-        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
       ),
     );
   }
@@ -630,10 +684,7 @@ class _SheetButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ElevatedButton(
-      onPressed: () {
-        Navigator.of(context).pop();
-        onTap();
-      },
+      onPressed: onTap,
       style: ElevatedButton.styleFrom(
         backgroundColor: const Color(0xFF111827),
         foregroundColor: Colors.white,
