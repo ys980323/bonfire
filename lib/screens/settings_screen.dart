@@ -22,12 +22,24 @@ class SettingsScreen extends StatelessWidget {
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
-          const ListTile(
-            title: Text('Bonfire 設定', style: TextStyle(color: Colors.white)),
-            subtitle: Text(
-              'アプリの各種設定や情報へアクセスできます。',
-              style: TextStyle(color: Colors.white70),
-            ),
+          const Divider(color: Colors.white24),
+          _item(
+            context,
+            icon: Icons.block,
+            title: '広告非表示を購入',
+            onTap: () async {
+              await _purchaseRemoveAds(context);
+              await onRefreshEntitlements();
+            },
+          ),
+          _item(
+            context,
+            icon: Icons.restore,
+            title: '購入を復元',
+            onTap: () async {
+              await _restorePurchases(context);
+              await onRefreshEntitlements();
+            },
           ),
           const Divider(color: Colors.white24),
           _item(
@@ -59,25 +71,6 @@ class SettingsScreen extends StatelessWidget {
             icon: Icons.feedback_outlined,
             title: 'ご意見ご要望',
             onTap: () => _sendFeedback(),
-          ),
-          const Divider(color: Colors.white24),
-          _item(
-            context,
-            icon: Icons.block,
-            title: '広告非表示を購入',
-            onTap: () async {
-              await _purchaseRemoveAds(context);
-              await onRefreshEntitlements();
-            },
-          ),
-          _item(
-            context,
-            icon: Icons.restore,
-            title: '購入を復元',
-            onTap: () async {
-              await _restorePurchases(context);
-              await onRefreshEntitlements();
-            },
           ),
           const Divider(color: Colors.white24),
           const ListTile(

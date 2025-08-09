@@ -589,7 +589,7 @@ class _CampfirePainter extends CustomPainter {
         Paint()
           ..shader = RadialGradient(
             colors: [
-              const Color(0xFFFF7A1A).withOpacity(0.6 * factor),
+              const Color(0xFFFF7A1A).withOpacity(0.9 * factor),
               Colors.transparent,
             ],
             stops: const [0.0, 1.0],
