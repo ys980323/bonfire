@@ -353,7 +353,7 @@ class _StopButton extends StatelessWidget {
     return ElevatedButton.icon(
       onPressed: onPressed,
       icon: const Icon(Icons.stop, size: 18),
-      label: const Text('停止'),
+      label: const Text('火を消す'),
       style: ElevatedButton.styleFrom(
         backgroundColor: const Color(0xFF5A2A2A),
         foregroundColor: Colors.white,
@@ -368,44 +368,8 @@ class _StarrySkyBackground extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ShaderMask(
-      shaderCallback:
-          (rect) => const LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [Colors.black, Colors.black],
-          ).createShader(rect),
-      blendMode: BlendMode.srcATop,
-      child: CustomPaint(
-        painter: _StarsPainter(),
-        child: const SizedBox.expand(),
-      ),
-    );
+    return const SizedBox.expand(child: ColoredBox(color: Colors.black));
   }
-}
-
-class _StarsPainter extends CustomPainter {
-  final math.Random _rand = math.Random(42);
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final bg = Paint()..color = Colors.black;
-    canvas.drawRect(Offset.zero & size, bg);
-
-    final starPaint = Paint()..color = Colors.white.withOpacity(0.9);
-    for (int i = 0; i < 160; i++) {
-      final x = _rand.nextDouble() * size.width;
-      final y = _rand.nextDouble() * size.height;
-      final r = 0.6 + _rand.nextDouble() * 1.2;
-      starPaint.color = Colors.white.withOpacity(
-        0.4 + _rand.nextDouble() * 0.6,
-      );
-      canvas.drawCircle(Offset(x, y), r, starPaint);
-    }
-  }
-
-  @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
 
 class _CampfirePainter extends CustomPainter {
@@ -420,6 +384,14 @@ class _CampfirePainter extends CustomPainter {
     }
 
     final center = Offset(size.width / 2, size.height * 0.62);
+
+    // 描画クリップ（境界ブリード抑制）
+    final clipRRect = RRect.fromRectAndRadius(
+      Offset.zero & size,
+      const Radius.circular(0),
+    );
+    canvas.save();
+    canvas.clipRRect(clipRRect);
 
     // 炎のノイズ的ゆらぎ
     double flicker(double seed, double scale) {
@@ -477,28 +449,28 @@ class _CampfirePainter extends CustomPainter {
     }
 
     drawFlameLayer(
-      baseRadius: 70,
+      baseRadius: 82,
       color: const Color(0xFFFF3B1D),
       yOffset: 0 + flicker(0.2, 6) * factor,
       noiseScale: 10,
       squeeze: 2.6,
     );
     drawFlameLayer(
-      baseRadius: 54,
+      baseRadius: 65,
       color: const Color(0xFFFF7A1A),
       yOffset: 16 + flicker(0.8, 5) * factor,
       noiseScale: 8,
       squeeze: 2.2,
     );
     drawFlameLayer(
-      baseRadius: 42,
+      baseRadius: 50,
       color: const Color(0xFFFFC23B),
       yOffset: 30 + flicker(1.6, 4) * factor,
       noiseScale: 6,
       squeeze: 1.8,
     );
     drawFlameLayer(
-      baseRadius: 30,
+      baseRadius: 36,
       color: const Color.fromARGB(255, 255, 249, 236),
       yOffset: 42 + flicker(2.3, 3) * factor,
       noiseScale: 5,
@@ -532,6 +504,8 @@ class _CampfirePainter extends CustomPainter {
             stops: const [0.0, 1.0],
           ).createShader(Rect.fromCircle(center: glowCenter, radius: 200));
     canvas.drawCircle(glowCenter, 200, glowPaint);
+
+    canvas.restore();
   }
 
   @override
@@ -541,7 +515,7 @@ class _CampfirePainter extends CustomPainter {
 
 Future<Duration?> _pickCustomDuration(BuildContext context) async {
   final minutesController = TextEditingController();
-  final secondsController = TextEditingController(text: '00');
+  final secondsController = TextEditingController();
   Duration? result;
   await showDialog(
     context: context,
