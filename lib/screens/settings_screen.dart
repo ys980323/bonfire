@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:purchases_flutter/purchases_flutter.dart';
@@ -14,6 +15,10 @@ class SettingsScreen extends StatelessWidget {
   static const String _appShareText = '焚き火アプリ「Bonfire」おすすめ！';
   static const String _storeUrl = 'https://example.com/app';
 
+  // RevenueCatの設定に合わせて変更する（ダッシュボード側で用意したID）
+  static const String _offeringId = 'premium'; // 例: default / current
+  static const PackageType _targetPackageType = PackageType.lifetime; // 買い切り
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -22,24 +27,12 @@ class SettingsScreen extends StatelessWidget {
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
-          const Divider(color: Colors.white24),
-          _item(
-            context,
-            icon: Icons.block,
-            title: '広告非表示を購入',
-            onTap: () async {
-              await _purchaseRemoveAds(context);
-              await onRefreshEntitlements();
-            },
-          ),
-          _item(
-            context,
-            icon: Icons.restore,
-            title: '購入を復元',
-            onTap: () async {
-              await _restorePurchases(context);
-              await onRefreshEntitlements();
-            },
+          const ListTile(
+            title: Text('Bonfire 設定', style: TextStyle(color: Colors.white)),
+            subtitle: Text(
+              'アプリの各種設定や情報へアクセスできます。',
+              style: TextStyle(color: Colors.white70),
+            ),
           ),
           const Divider(color: Colors.white24),
           _item(
@@ -71,6 +64,25 @@ class SettingsScreen extends StatelessWidget {
             icon: Icons.feedback_outlined,
             title: 'ご意見ご要望',
             onTap: () => _sendFeedback(),
+          ),
+          const Divider(color: Colors.white24),
+          _item(
+            context,
+            icon: Icons.block,
+            title: '広告非表示を購入',
+            onTap: () async {
+              await _purchaseRemoveAds(context);
+              await onRefreshEntitlements();
+            },
+          ),
+          _item(
+            context,
+            icon: Icons.restore,
+            title: '購入を復元',
+            onTap: () async {
+              await _restorePurchases(context);
+              await onRefreshEntitlements();
+            },
           ),
           const Divider(color: Colors.white24),
           const ListTile(
@@ -117,20 +129,28 @@ class SettingsScreen extends StatelessWidget {
 
   Future<void> _purchaseRemoveAds(BuildContext context) async {
     try {
-      // Offeringから対象パッケージを取得（事前にRCダッシュボードで設定）
       final offerings = await Purchases.getOfferings();
-      final current = offerings.current;
-      if (current == null) return;
-      // 一番上のパッケージを仮に対象とする（本番はID指定を推奨）
-      final package = current.availablePackages.first;
-      await Purchases.purchasePackage(package);
+      final offering = offerings.all[_offeringId] ?? offerings.current;
+      if (offering == null || offering.availablePackages.isEmpty) {
+        _showError(
+          context,
+          '現在購入可能な商品がありません。\nRevenueCatのOfferingとProductの設定を確認してください。',
+        );
+        return;
+      }
+      final candidates = offering.availablePackages;
+      Package? target = candidates.firstWhere(
+        (p) => p.packageType == _targetPackageType,
+        orElse: () => candidates.first,
+      );
+      await Purchases.purchasePackage(target);
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(const SnackBar(content: Text('購入が完了しました。')));
+    } on PlatformException catch (e) {
+      _showError(context, '購入に失敗しました: ${e.message ?? e.toString()}');
     } catch (e) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('購入に失敗しました: $e')));
+      _showError(context, '購入に失敗しました: $e');
     }
   }
 
@@ -140,10 +160,16 @@ class SettingsScreen extends StatelessWidget {
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(const SnackBar(content: Text('購入情報を復元しました。')));
+    } on PlatformException catch (e) {
+      _showError(context, '復元に失敗しました: ${e.message ?? e.toString()}');
     } catch (e) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('復元に失敗しました: $e')));
+      _showError(context, '復元に失敗しました: $e');
     }
+  }
+
+  void _showError(BuildContext context, String message) {
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(message)));
   }
 }

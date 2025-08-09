@@ -32,7 +32,7 @@ class _BonfireAppState extends State<BonfireApp> {
   Future<void> _initRevenueCat() async {
     // TODO: ここにあなたのRevenueCat公開APIキーを設定
     // iOS例: 'appl_XXXXXXXXXXXXXXXXXXXXXXXX'
-    const apiKey = 'appl_REVENUECAT_PUBLIC_API_KEY_PLACEHOLDER';
+    const apiKey = 'appl_jJJemQZZkdjXqlETqkoohDijJGo';
     await Purchases.setLogLevel(LogLevel.warn);
     await Purchases.configure(PurchasesConfiguration(apiKey));
     await _refreshEntitlements();
@@ -42,7 +42,9 @@ class _BonfireAppState extends State<BonfireApp> {
     try {
       final customerInfo = await Purchases.getCustomerInfo();
       // Entitlement ID はRCダッシュボードで設定したIDに合わせて変更
-      final active = customerInfo.entitlements.active.containsKey('remove_ads');
+      final active = customerInfo.entitlements.active.containsKey(
+        'com.premium',
+      );
       adsState.setAdsEnabled(!active);
     } catch (_) {
       // 失敗時は広告有効のまま
