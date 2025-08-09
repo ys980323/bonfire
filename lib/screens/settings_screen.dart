@@ -1,7 +1,15 @@
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
+import 'package:share_plus/share_plus.dart';
 
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({super.key});
+
+  static const String _privacyUrl = 'https://example.com/privacy';
+  static const String _termsUrl = 'https://example.com/terms';
+  static const String _supportEmail = 'support@example.com';
+  static const String _appShareText = '焚き火アプリ「Bonfire」おすすめ！';
+  static const String _storeUrl = 'https://example.com/app';
 
   @override
   Widget build(BuildContext context) {
@@ -10,21 +18,85 @@ class SettingsScreen extends StatelessWidget {
       backgroundColor: Colors.black,
       body: ListView(
         padding: const EdgeInsets.all(16),
-        children: const [
-          ListTile(
+        children: [
+          const ListTile(
             title: Text('Bonfire 設定', style: TextStyle(color: Colors.white)),
             subtitle: Text(
-              'ここに各種設定項目を追加できます。',
+              'アプリの各種設定や情報へアクセスできます。',
               style: TextStyle(color: Colors.white70),
             ),
           ),
-          Divider(color: Colors.white24),
-          ListTile(
+          const Divider(color: Colors.white24),
+          _item(
+            context,
+            icon: Icons.privacy_tip_outlined,
+            title: 'プライバシーポリシー',
+            onTap: () => _launchUrl(_privacyUrl),
+          ),
+          _item(
+            context,
+            icon: Icons.description_outlined,
+            title: '利用規約',
+            onTap: () => _launchUrl(_termsUrl),
+          ),
+          _item(
+            context,
+            icon: Icons.share_outlined,
+            title: 'このアプリを紹介する',
+            onTap: () => Share.share('$_appShareText\n$_storeUrl'),
+          ),
+          _item(
+            context,
+            icon: Icons.star_rate_outlined,
+            title: 'このアプリを評価する',
+            onTap: () => _launchUrl(_storeUrl),
+          ),
+          _item(
+            context,
+            icon: Icons.feedback_outlined,
+            title: 'ご意見ご要望',
+            onTap: () => _sendFeedback(),
+          ),
+          const Divider(color: Colors.white24),
+          const ListTile(
             title: Text('バージョン', style: TextStyle(color: Colors.white)),
             subtitle: Text('1.0.0', style: TextStyle(color: Colors.white54)),
           ),
         ],
       ),
     );
+  }
+
+  Widget _item(
+    BuildContext context, {
+    required IconData icon,
+    required String title,
+    required VoidCallback onTap,
+  }) {
+    return ListTile(
+      leading: Icon(icon, color: Colors.white70),
+      title: Text(title, style: const TextStyle(color: Colors.white)),
+      trailing: const Icon(Icons.chevron_right, color: Colors.white38),
+      onTap: onTap,
+    );
+  }
+
+  static Future<void> _launchUrl(String url) async {
+    final uri = Uri.parse(url);
+    if (!await launchUrl(uri, mode: LaunchMode.externalApplication)) {
+      // ignore
+    }
+  }
+
+  Future<void> _sendFeedback() async {
+    final uri = Uri(
+      scheme: 'mailto',
+      path: _supportEmail,
+      queryParameters: {
+        'subject': 'Bonfire ご意見・ご要望',
+        'body': '以下にご記入ください\n\n・ご意見/ご要望:\n',
+      },
+    );
+    await launchUrl(uri);
   }
 }
