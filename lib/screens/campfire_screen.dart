@@ -591,12 +591,29 @@ class _CampfirePainter extends CustomPainter {
       blurSigma: 1,
     );
 
+    // 火の粉（チラチラと揺らめく大きめの火花）
+    final sparkPaint =
+        Paint()
+          ..color = const Color(
+            0xFFFFE7A8,
+          ).withOpacity(math.min(1.0, 0.95 * factor))
+          ..blendMode = BlendMode.plus
+          ..maskFilter = ui.MaskFilter.blur(ui.BlurStyle.normal, 0.5);
+    final baseSparkCount = (18 * factor).clamp(0, 18).toInt();
+    for (int i = 0; i < baseSparkCount; i++) {
+      final a = (i * 0.7 + t * 6) % 6;
+      final ox = math.sin(a * 2.0) * (14 + i * factor);
+      final oy = -a * (26 + i * 2 * factor);
+      final r = (1.0 + (i % 3) * 0.4) * (0.8 + 0.5 * factor);
+      canvas.drawCircle(center.translate(ox, oy - 40), r, sparkPaint);
+    }
+
     final glowCenter = center.translate(0, -40);
     final glowPaint =
         Paint()
           ..shader = RadialGradient(
             colors: [
-              const Color(0xFFFF7A1A).withOpacity(0.9 * factor),
+              const Color(0xFFFF7A1A).withOpacity(0.6 * factor),
               Colors.transparent,
             ],
             stops: const [0.0, 1.0],
