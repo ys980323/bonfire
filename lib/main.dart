@@ -3,10 +3,13 @@ import 'package:flutter/material.dart';
 import 'package:audioplayers/audioplayers.dart';
 import 'package:wakelock_plus/wakelock_plus.dart';
 import 'package:flutter/services.dart';
+import 'package:google_mobile_ads/google_mobile_ads.dart';
+import 'package:flutter/foundation.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
   SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
+  MobileAds.instance.initialize();
   runApp(const BonfireApp());
 }
 
@@ -46,6 +49,9 @@ class _CampfireScreenState extends State<CampfireScreen>
   bool get _isTimerRunning =>
       _isUnlimited || (_endAt != null && _remaining > Duration.zero);
 
+  BannerAd? _bannerAd;
+  bool get _isBannerReady => _bannerAd != null;
+
   @override
   void initState() {
     super.initState();
@@ -67,6 +73,8 @@ class _CampfireScreenState extends State<CampfireScreen>
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _tickTimer();
     });
+
+    _loadBanner();
   }
 
   Future<void> _playAudioFadeIn() async {
@@ -198,11 +206,54 @@ class _CampfireScreenState extends State<CampfireScreen>
     return '$m:$s';
   }
 
+  void _loadBanner() {
+    final adUnitId = _getBannerId();
+    final banner = BannerAd(
+      adUnitId: adUnitId,
+      size: AdSize.banner,
+      request: const AdRequest(),
+      listener: BannerAdListener(
+        onAdLoaded: (ad) => setState(() => _bannerAd = ad as BannerAd?),
+        onAdFailedToLoad: (ad, error) {
+          ad.dispose();
+          setState(() => _bannerAd = null);
+        },
+      ),
+    );
+    banner.load();
+  }
+
+  String _getBannerId() {
+    // kReleaseModeで本番/テストを切り替え
+    if (kReleaseMode) {
+      // TODO: 本番のバナー広告ユニットIDに置き換えてください
+      switch (defaultTargetPlatform) {
+        case TargetPlatform.iOS:
+          return 'ca-app-pub-xxxxxxxxxxxxxxxx/iiiiiiiiii';
+        case TargetPlatform.android:
+          return 'ca-app-pub-xxxxxxxxxxxxxxxx/aaaaaaaaaa';
+        default:
+          return 'ca-app-pub-xxxxxxxxxxxxxxxx/iiiiiiiiii';
+      }
+    } else {
+      // AdMob公式のテストID（iOS/Android）
+      switch (defaultTargetPlatform) {
+        case TargetPlatform.iOS:
+          return 'ca-app-pub-3940256099942544/2934735716';
+        case TargetPlatform.android:
+          return 'ca-app-pub-3940256099942544/6300978111';
+        default:
+          return 'ca-app-pub-3940256099942544/2934735716';
+      }
+    }
+  }
+
   @override
   void dispose() {
     _flickerController.dispose();
     _flameController.dispose();
     _player.dispose();
+    _bannerAd?.dispose();
     super.dispose();
   }
 
@@ -249,7 +300,7 @@ class _CampfireScreenState extends State<CampfireScreen>
                 ),
               ),
               Positioned(
-                bottom: 24,
+                bottom: (_isBannerReady ? 64 : 24),
                 left: 16,
                 right: 16,
                 child: Column(
@@ -296,6 +347,16 @@ class _CampfireScreenState extends State<CampfireScreen>
                   ],
                 ),
               ),
+              if (_isBannerReady)
+                Positioned(
+                  bottom: 0,
+                  left: 0,
+                  right: 0,
+                  child: SizedBox(
+                    height: _bannerAd!.size.height.toDouble(),
+                    child: AdWidget(ad: _bannerAd!),
+                  ),
+                ),
             ],
           ),
         ),
