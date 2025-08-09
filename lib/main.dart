@@ -43,6 +43,7 @@ class _CampfireScreenState extends State<CampfireScreen>
   double _userVolume = 0.6; // ユーザー設定音量(0.0-1.0)
   bool _isUnlimited = false; // 無制限モード
   bool _uiFireOn = false; // UI表示用の点火状態（即時切替用）
+  bool _muted = false; // 消音状態
 
   Duration _remaining = Duration.zero;
   DateTime? _endAt;
@@ -86,9 +87,10 @@ class _CampfireScreenState extends State<CampfireScreen>
         await _player.play(AssetSource('audio/campfire.mp3'));
       }
       const steps = 20;
+      final target = _muted ? 0.0 : _userVolume;
       for (int i = 0; i <= steps; i++) {
         await Future.delayed(const Duration(milliseconds: 40));
-        _currentVolume = (_userVolume * i / steps);
+        _currentVolume = (target * i / steps);
         await _player.setVolume(_currentVolume);
       }
     } catch (_) {}
@@ -226,10 +228,9 @@ class _CampfireScreenState extends State<CampfireScreen>
   String _getBannerId() {
     // kReleaseModeで本番/テストを切り替え
     if (kReleaseMode) {
-      // TODO: 本番のバナー広告ユニットIDに置き換えてください
       switch (defaultTargetPlatform) {
         case TargetPlatform.iOS:
-          return 'ca-app-pub-xxxxxxxxxxxxxxxx/iiiiiiiiii';
+          return 'ca-app-pub-8980159252766093~3569161950';
         case TargetPlatform.android:
           return 'ca-app-pub-xxxxxxxxxxxxxxxx/aaaaaaaaaa';
         default:
@@ -322,6 +323,21 @@ class _CampfireScreenState extends State<CampfireScreen>
                     Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
+                        _IconCircleButton(
+                          icon: _muted ? Icons.volume_off : Icons.volume_up,
+                          onPressed: () async {
+                            setState(() {
+                              _muted = !_muted;
+                            });
+                            // 再生中なら即時反映
+                            if (_player.state == PlayerState.playing) {
+                              final v = _muted ? 0.0 : _userVolume;
+                              _currentVolume = v;
+                              await _player.setVolume(v);
+                            }
+                          },
+                        ),
+                        const SizedBox(width: 14),
                         _IconCircleButton(
                           icon: Icons.timer_outlined,
                           onPressed: _openTimerSheet,
@@ -474,6 +490,7 @@ class _CampfirePainter extends CustomPainter {
       required double yOffset,
       required double noiseScale,
       required double squeeze,
+      required BlendMode blendMode,
     }) {
       final path = Path();
       final segments = 24;
@@ -531,55 +548,42 @@ class _CampfirePainter extends CustomPainter {
       final paint =
           Paint()
             ..shader = shader
-            ..blendMode = BlendMode.plus;
+            ..blendMode = blendMode;
       canvas.drawPath(path, paint);
     }
 
     drawFlameLayer(
       baseRadius: 82,
-      color: const Color(0xFFFF3B1D),
+      color: const Color.fromARGB(255, 195, 26, 0),
       yOffset: 0 + flicker(0.2, 6) * factor,
       noiseScale: 10,
       squeeze: 2.6,
+      blendMode: BlendMode.screen,
     );
     drawFlameLayer(
       baseRadius: 65,
-      color: const Color(0xFFFF7A1A),
+      color: const Color.fromARGB(255, 127, 53, 0),
       yOffset: 16 + flicker(0.8, 5) * factor,
       noiseScale: 8,
       squeeze: 2.2,
+      blendMode: BlendMode.screen,
     );
     drawFlameLayer(
       baseRadius: 50,
-      color: const Color(0xFFFFC23B),
+      color: const Color.fromARGB(255, 115, 33, 0),
       yOffset: 30 + flicker(1.6, 4) * factor,
       noiseScale: 6,
       squeeze: 1.8,
+      blendMode: BlendMode.screen,
     );
     drawFlameLayer(
       baseRadius: 36,
-      color: const Color.fromARGB(255, 255, 249, 236),
+      color: const Color.fromARGB(255, 73, 27, 0),
       yOffset: 42 + flicker(2.3, 3) * factor,
       noiseScale: 5,
       squeeze: 1.2,
+      blendMode: BlendMode.screen,
     );
-
-    // 中心のホットコア（白く強い発光）
-    final coreCenter = center.translate(0, -38);
-    final coreRadius = 28 * (0.8 + 0.2 * factor);
-    final corePaint =
-        Paint()
-          ..shader = RadialGradient(
-            colors: [
-              Colors.white.withOpacity(0.95 * factor),
-              Colors.white.withOpacity(0.0),
-            ],
-            stops: const [0.0, 1.0],
-          ).createShader(
-            Rect.fromCircle(center: coreCenter, radius: coreRadius),
-          )
-          ..blendMode = BlendMode.plus;
-    canvas.drawCircle(coreCenter, coreRadius, corePaint);
 
     // 火の粉
     final spark =
@@ -606,7 +610,8 @@ class _CampfirePainter extends CustomPainter {
               Colors.transparent,
             ],
             stops: const [0.0, 1.0],
-          ).createShader(Rect.fromCircle(center: glowCenter, radius: 200));
+          ).createShader(Rect.fromCircle(center: glowCenter, radius: 200))
+          ..blendMode = BlendMode.plus;
     canvas.drawCircle(glowCenter, 200, glowPaint);
 
     canvas.restore();
