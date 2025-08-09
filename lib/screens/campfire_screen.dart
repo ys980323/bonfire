@@ -409,13 +409,6 @@ class _CampfireScreenState extends State<CampfireScreen>
                   },
                 ),
                 _SheetButton(
-                  label: '無制限',
-                  onTap: () {
-                    Navigator.of(bctx).pop();
-                    _startUnlimited();
-                  },
-                ),
-                _SheetButton(
                   label: '閉じる',
                   onTap: () => Navigator.of(bctx).pop(),
                 ),
