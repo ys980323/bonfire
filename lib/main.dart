@@ -39,6 +39,7 @@ class _CampfireScreenState extends State<CampfireScreen>
   double _currentVolume = 0.0;
   double _userVolume = 0.6; // ユーザー設定音量(0.0-1.0)
   bool _isUnlimited = false; // 無制限モード
+  bool _uiFireOn = false; // UI表示用の点火状態（即時切替用）
 
   Duration _remaining = Duration.zero;
   DateTime? _endAt;
@@ -100,6 +101,9 @@ class _CampfireScreenState extends State<CampfireScreen>
 
   void _startTimer(Duration duration) async {
     _isUnlimited = false;
+    setState(() {
+      _uiFireOn = true;
+    });
     _endAt = DateTime.now().add(duration);
     setState(() {
       _remaining = duration;
@@ -123,6 +127,9 @@ class _CampfireScreenState extends State<CampfireScreen>
 
   Future<void> _startUnlimited() async {
     _isUnlimited = true;
+    setState(() {
+      _uiFireOn = true;
+    });
     _endAt = null;
     setState(() {
       _remaining = Duration.zero;
@@ -143,7 +150,10 @@ class _CampfireScreenState extends State<CampfireScreen>
     } catch (_) {}
   }
 
-  void _cancelTimerAndExtinguish() async {
+  Future<void> _cancelTimerAndExtinguish() async {
+    setState(() {
+      _uiFireOn = false; // まずUIを消灯状態に
+    });
     _endAt = null;
     _isUnlimited = false;
     setState(() {
@@ -245,70 +255,41 @@ class _CampfireScreenState extends State<CampfireScreen>
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    // タイマー表示
-                    AnimatedBuilder(
-                      animation: _flameController,
-                      builder: (context, _) {
-                        final on = _flameController.value > 0.0;
-                        return Text(
-                          on
-                              ? (_isUnlimited
-                                  ? '∞'
-                                  : _formatDuration(_remaining))
-                              : '00:00',
-                          textAlign: TextAlign.center,
-                          style: TextStyle(
-                            color: Colors.white.withOpacity(0.9),
-                            fontSize: 22,
-                            fontFeatures: const [FontFeature.tabularFigures()],
-                          ),
-                        );
-                      },
-                    ),
-                    // プリセット + 任意 + 無制限
-                    Wrap(
-                      alignment: WrapAlignment.center,
-                      spacing: 10,
-                      runSpacing: 8,
+                    // カウントダウンは稼働中のみ表示
+                    if (_isTimerRunning && !_isUnlimited)
+                      Text(
+                        _formatDuration(_remaining),
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          color: Colors.white.withOpacity(0.9),
+                          fontSize: 22,
+                          fontFeatures: const [FontFeature.tabularFigures()],
+                        ),
+                      ),
+                    const SizedBox(height: 10),
+                    // 時計ボタン + 火のトグル
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        _TimeButton(
-                          label: '5分',
-                          onPressed:
-                              () => _startTimer(const Duration(minutes: 5)),
-                          enabled: !_isTimerRunning,
+                        _IconCircleButton(
+                          icon: Icons.timer_outlined,
+                          onPressed: _openTimerSheet,
                         ),
-                        _TimeButton(
-                          label: '10分',
-                          onPressed:
-                              () => _startTimer(const Duration(minutes: 10)),
-                          enabled: !_isTimerRunning,
-                        ),
-                        _TimeButton(
-                          label: '15分',
-                          onPressed:
-                              () => _startTimer(const Duration(minutes: 15)),
-                          enabled: !_isTimerRunning,
-                        ),
-                        _TimeButton(
-                          label: '任意',
-                          onPressed: () async {
-                            final d = await _pickCustomDuration(context);
-                            if (d != null && d > Duration.zero) {
-                              _startTimer(d);
-                            }
+                        const SizedBox(width: 14),
+                        _FireToggleButton(
+                          isOn: _uiFireOn,
+                          onToggleOn: () async {
+                            setState(() {
+                              _uiFireOn = true;
+                            });
+                            await _startUnlimited();
                           },
-                          enabled: !_isTimerRunning,
-                        ),
-                        _TimeButton(
-                          label: '無制限',
-                          onPressed: _startUnlimited,
-                          enabled: !_isTimerRunning,
-                        ),
-                        _StopButton(
-                          onPressed:
-                              _isTimerRunning
-                                  ? _cancelTimerAndExtinguish
-                                  : null,
+                          onToggleOff: () async {
+                            setState(() {
+                              _uiFireOn = false;
+                            });
+                            await _cancelTimerAndExtinguish();
+                          },
                         ),
                       ],
                     ),
@@ -321,46 +302,54 @@ class _CampfireScreenState extends State<CampfireScreen>
       ),
     );
   }
-}
 
-class _TimeButton extends StatelessWidget {
-  final String label;
-  final VoidCallback? onPressed;
-  final bool enabled;
-  const _TimeButton({
-    required this.label,
-    required this.onPressed,
-    required this.enabled,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return ElevatedButton(
-      onPressed: enabled ? onPressed : null,
-      style: ElevatedButton.styleFrom(
-        backgroundColor: Colors.black,
-        foregroundColor: Colors.white,
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+  Future<void> _openTimerSheet() async {
+    await showModalBottomSheet(
+      context: context,
+      backgroundColor: const Color(0xFF0B0B0B),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
       ),
-      child: Text(label),
-    );
-  }
-}
-
-class _StopButton extends StatelessWidget {
-  final VoidCallback? onPressed;
-  const _StopButton({this.onPressed});
-  @override
-  Widget build(BuildContext context) {
-    return ElevatedButton.icon(
-      onPressed: onPressed,
-      icon: const Icon(Icons.stop, size: 18),
-      label: const Text('火を消す'),
-      style: ElevatedButton.styleFrom(
-        backgroundColor: const Color(0xFF5A2A2A),
-        foregroundColor: Colors.white,
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-      ),
+      builder: (bctx) {
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            child: Wrap(
+              runSpacing: 10,
+              spacing: 10,
+              alignment: WrapAlignment.center,
+              children: [
+                _SheetButton(
+                  label: '5分',
+                  onTap: () => _startTimer(const Duration(minutes: 5)),
+                ),
+                _SheetButton(
+                  label: '10分',
+                  onTap: () => _startTimer(const Duration(minutes: 10)),
+                ),
+                _SheetButton(
+                  label: '15分',
+                  onTap: () => _startTimer(const Duration(minutes: 15)),
+                ),
+                _SheetButton(
+                  label: '任意',
+                  onTap: () async {
+                    final d = await _pickCustomDuration(bctx);
+                    if (d != null && d > Duration.zero) {
+                      _startTimer(d);
+                    }
+                  },
+                ),
+                _SheetButton(label: '無制限', onTap: _startUnlimited),
+                _SheetButton(
+                  label: '閉じる',
+                  onTap: () => Navigator.of(bctx).pop(),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
     );
   }
 }
@@ -582,4 +571,75 @@ Future<Duration?> _pickCustomDuration(BuildContext context) async {
     },
   );
   return result;
+}
+
+class _IconCircleButton extends StatelessWidget {
+  final IconData icon;
+  final VoidCallback onPressed;
+  const _IconCircleButton({required this.icon, required this.onPressed});
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: 56,
+      height: 56,
+      child: Material(
+        color: const Color(0xFF1F2937),
+        shape: const CircleBorder(),
+        child: InkWell(
+          customBorder: const CircleBorder(),
+          onTap: onPressed,
+          child: Icon(icon, color: Colors.white, size: 26),
+        ),
+      ),
+    );
+  }
+}
+
+class _FireToggleButton extends StatelessWidget {
+  final bool isOn;
+  final VoidCallback onToggleOn;
+  final VoidCallback onToggleOff;
+  const _FireToggleButton({
+    required this.isOn,
+    required this.onToggleOn,
+    required this.onToggleOff,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return ElevatedButton.icon(
+      onPressed: isOn ? onToggleOff : onToggleOn,
+      icon: Icon(isOn ? Icons.stop : Icons.local_fire_department, size: 18),
+      label: Text(isOn ? '火を消す' : '火をつける'),
+      style: ElevatedButton.styleFrom(
+        backgroundColor:
+            isOn ? const Color(0xFF5A2A2A) : const Color(0xFF1E3A1A),
+        foregroundColor: Colors.white,
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+      ),
+    );
+  }
+}
+
+class _SheetButton extends StatelessWidget {
+  final String label;
+  final VoidCallback onTap;
+  const _SheetButton({required this.label, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return ElevatedButton(
+      onPressed: () {
+        Navigator.of(context).pop();
+        onTap();
+      },
+      style: ElevatedButton.styleFrom(
+        backgroundColor: const Color(0xFF111827),
+        foregroundColor: Colors.white,
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      ),
+      child: Text(label),
+    );
+  }
 }
