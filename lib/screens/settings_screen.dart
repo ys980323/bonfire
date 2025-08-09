@@ -27,13 +27,6 @@ class SettingsScreen extends StatelessWidget {
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
-          const ListTile(
-            title: Text('Bonfire 設定', style: TextStyle(color: Colors.white)),
-            subtitle: Text(
-              'アプリの各種設定や情報へアクセスできます。',
-              style: TextStyle(color: Colors.white70),
-            ),
-          ),
           const Divider(color: Colors.white24),
           _item(
             context,

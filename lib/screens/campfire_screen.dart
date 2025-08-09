@@ -279,7 +279,7 @@ class _CampfireScreenState extends State<CampfireScreen>
                 ),
               ),
               Positioned(
-                bottom: (_isBannerReady ? 64 : 24),
+                bottom: (_isBannerReady && widget.adsEnabled ? 64 : 24),
                 left: 16,
                 right: 16,
                 child: Column(
