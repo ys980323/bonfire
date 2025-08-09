@@ -343,6 +343,11 @@ class _CampfireScreenState extends State<CampfireScreen>
                           onPressed: _openTimerSheet,
                         ),
                         const SizedBox(width: 14),
+                        _IconCircleButton(
+                          icon: Icons.settings_outlined,
+                          onPressed: _openSettings,
+                        ),
+                        const SizedBox(width: 14),
                         _FireToggleButton(
                           isOn: _uiFireOn,
                           onToggleOn: () async {
@@ -442,6 +447,12 @@ class _CampfireScreenState extends State<CampfireScreen>
     if (!mounted) return;
     // 念のためUIを再描画（ボトムシート閉鎖後にコントロールが確実に再表示されるように）
     setState(() {});
+  }
+
+  void _openSettings() {
+    Navigator.of(
+      context,
+    ).push(MaterialPageRoute(builder: (_) => const SettingsScreen()));
   }
 }
 
@@ -699,15 +710,15 @@ class _IconCircleButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return SizedBox(
-      width: 56,
-      height: 56,
+      width: 48,
+      height: 48,
       child: Material(
         color: const Color(0xFF1F2937),
         shape: const CircleBorder(),
         child: InkWell(
           customBorder: const CircleBorder(),
           onTap: onPressed,
-          child: Icon(icon, color: Colors.white, size: 26),
+          child: Icon(icon, color: Colors.white, size: 24),
         ),
       ),
     );
@@ -736,7 +747,7 @@ class _FireToggleButton extends StatelessWidget {
                 ? const Color(0xFF5A2A2A)
                 : const Color.fromARGB(255, 58, 35, 26),
         foregroundColor: Colors.white,
-        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
+        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
       ),
     );
   }
@@ -757,6 +768,35 @@ class _SheetButton extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       ),
       child: Text(label),
+    );
+  }
+}
+
+class SettingsScreen extends StatelessWidget {
+  const SettingsScreen({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: const Text('設定'), backgroundColor: Colors.black),
+      backgroundColor: Colors.black,
+      body: ListView(
+        padding: const EdgeInsets.all(16),
+        children: const [
+          ListTile(
+            title: Text('Bonfire 設定', style: TextStyle(color: Colors.white)),
+            subtitle: Text(
+              'ここに各種設定項目を追加できます。',
+              style: TextStyle(color: Colors.white70),
+            ),
+          ),
+          Divider(color: Colors.white24),
+          ListTile(
+            title: Text('バージョン', style: TextStyle(color: Colors.white)),
+            subtitle: Text('1.0.0', style: TextStyle(color: Colors.white54)),
+          ),
+        ],
+      ),
     );
   }
 }
