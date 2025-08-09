@@ -1,4 +1,5 @@
 import 'dart:math' as math;
+import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:audioplayers/audioplayers.dart';
 import 'package:wakelock_plus/wakelock_plus.dart';
@@ -493,6 +494,7 @@ class _CampfirePainter extends CustomPainter {
       required double noiseScale,
       required double squeeze,
       required BlendMode blendMode,
+      required double blurSigma,
     }) {
       final path = Path();
       final segments = 24;
@@ -547,7 +549,8 @@ class _CampfirePainter extends CustomPainter {
       final paint =
           Paint()
             ..shader = shader
-            ..blendMode = blendMode;
+            ..blendMode = blendMode
+            ..maskFilter = ui.MaskFilter.blur(ui.BlurStyle.normal, blurSigma);
       canvas.drawPath(path, paint);
     }
 
@@ -558,14 +561,16 @@ class _CampfirePainter extends CustomPainter {
       noiseScale: 10,
       squeeze: 2.6,
       blendMode: BlendMode.screen,
+      blurSigma: 8,
     );
     drawFlameLayer(
       baseRadius: 65,
-      color: const Color.fromARGB(255, 127, 53, 0),
+      color: const ui.Color.fromARGB(255, 150, 37, 0),
       yOffset: 16 + flicker(0.8, 5) * factor,
       noiseScale: 8,
       squeeze: 2.2,
       blendMode: BlendMode.screen,
+      blurSigma: 4,
     );
     drawFlameLayer(
       baseRadius: 50,
@@ -574,14 +579,16 @@ class _CampfirePainter extends CustomPainter {
       noiseScale: 6,
       squeeze: 1.8,
       blendMode: BlendMode.screen,
+      blurSigma: 1,
     );
     drawFlameLayer(
       baseRadius: 36,
-      color: const Color.fromARGB(255, 73, 27, 0),
+      color: const ui.Color.fromARGB(255, 131, 9, 0),
       yOffset: 42 + flicker(2.3, 3) * factor,
       noiseScale: 5,
       squeeze: 1.2,
       blendMode: BlendMode.screen,
+      blurSigma: 1,
     );
 
     final glowCenter = center.translate(0, -40);
