@@ -263,39 +263,6 @@ class _CampfireScreenState extends State<CampfireScreen>
                         );
                       },
                     ),
-                    const SizedBox(height: 8),
-                    // 音量スライダー
-                    Row(
-                      children: [
-                        const Icon(
-                          Icons.volume_down,
-                          color: Colors.white70,
-                          size: 20,
-                        ),
-                        Expanded(
-                          child: Slider(
-                            value: _userVolume,
-                            onChanged: (v) async {
-                              setState(() {
-                                _userVolume = v;
-                              });
-                              if (_player.state == PlayerState.playing) {
-                                _currentVolume = _userVolume;
-                                await _player.setVolume(_userVolume);
-                              }
-                            },
-                            min: 0.0,
-                            max: 1.0,
-                          ),
-                        ),
-                        const Icon(
-                          Icons.volume_up,
-                          color: Colors.white70,
-                          size: 20,
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 10),
                     // プリセット + 任意 + 無制限
                     Wrap(
                       alignment: WrapAlignment.center,
@@ -488,20 +455,24 @@ class _CampfirePainter extends CustomPainter {
         }
       }
       path.close();
+      final innerBase = Color.lerp(Colors.white, color, 0.35)!;
+      final innerOpacity = (0.85 * factor + 0.25).clamp(0.0, 1.0);
+      final outerOpacity = (0.35 * factor + 0.15).clamp(0.0, 1.0);
+      final inner = innerBase.withOpacity(innerOpacity);
+      final outer = color.withOpacity(outerOpacity);
+      final shader = RadialGradient(
+        colors: [inner, outer],
+        stops: const [0.0, 1.0],
+      ).createShader(
+        Rect.fromCircle(
+          center: center.translate(0, -yOffset),
+          radius: baseRadius * 1.6,
+        ),
+      );
       final paint =
           Paint()
-            ..shader = RadialGradient(
-              colors: [
-                color.withOpacity(0.9 * factor.clamp(0, 1)),
-                color.withOpacity(0.2 * factor.clamp(0, 1)),
-              ],
-              stops: const [0.0, 1.0],
-            ).createShader(
-              Rect.fromCircle(
-                center: center.translate(0, -yOffset),
-                radius: baseRadius * 1.6,
-              ),
-            );
+            ..shader = shader
+            ..blendMode = BlendMode.plus;
       canvas.drawPath(path, paint);
     }
 
@@ -536,7 +507,10 @@ class _CampfirePainter extends CustomPainter {
 
     // 火の粉
     final spark =
-        Paint()..color = const Color(0xFFFFE7A8).withOpacity(0.9 * factor);
+        Paint()
+          ..color = const Color(
+            0xFFFFE7A8,
+          ).withOpacity(math.min(1.0, 0.95 * factor));
     final sparkCount = (18 * factor).clamp(0, 18).toInt();
     for (int i = 0; i < sparkCount; i++) {
       final a = (i * 0.7 + t * 6) % 6;
@@ -552,12 +526,12 @@ class _CampfirePainter extends CustomPainter {
         Paint()
           ..shader = RadialGradient(
             colors: [
-              const Color(0xFFFF7A1A).withOpacity(0.45 * factor),
+              const Color(0xFFFF7A1A).withOpacity(0.6 * factor),
               Colors.transparent,
             ],
             stops: const [0.0, 1.0],
-          ).createShader(Rect.fromCircle(center: glowCenter, radius: 180));
-    canvas.drawCircle(glowCenter, 180, glowPaint);
+          ).createShader(Rect.fromCircle(center: glowCenter, radius: 200));
+    canvas.drawCircle(glowCenter, 200, glowPaint);
   }
 
   @override
