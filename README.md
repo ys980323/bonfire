@@ -1,4 +1,4 @@
-# bofire
+# Bonfire
 
 A new Flutter project.
 

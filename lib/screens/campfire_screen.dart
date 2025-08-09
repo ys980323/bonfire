@@ -11,7 +11,13 @@ import '../widgets/starry_background.dart';
 import '../screens/settings_screen.dart';
 
 class CampfireScreen extends StatefulWidget {
-  const CampfireScreen({super.key});
+  final bool adsEnabled;
+  final Future<void> Function() onRefreshEntitlements;
+  const CampfireScreen({
+    super.key,
+    required this.adsEnabled,
+    required this.onRefreshEntitlements,
+  });
 
   @override
   State<CampfireScreen> createState() => _CampfireScreenState();
@@ -56,7 +62,9 @@ class _CampfireScreenState extends State<CampfireScreen>
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _tickTimer();
     });
-    _loadBanner();
+    if (widget.adsEnabled) {
+      _loadBanner();
+    }
   }
 
   void _loadBanner() {
@@ -334,7 +342,7 @@ class _CampfireScreenState extends State<CampfireScreen>
                   ],
                 ),
               ),
-              if (_isBannerReady)
+              if (_isBannerReady && widget.adsEnabled)
                 Positioned(
                   bottom: 0,
                   left: 0,
@@ -421,9 +429,14 @@ class _CampfireScreenState extends State<CampfireScreen>
   }
 
   void _openSettings() {
-    Navigator.of(
-      context,
-    ).push(MaterialPageRoute(builder: (_) => const SettingsScreen()));
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder:
+            (_) => SettingsScreen(
+              onRefreshEntitlements: widget.onRefreshEntitlements,
+            ),
+      ),
+    );
   }
 }
 

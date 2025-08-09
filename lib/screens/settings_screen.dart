@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:share_plus/share_plus.dart';
+import 'package:purchases_flutter/purchases_flutter.dart';
 
 class SettingsScreen extends StatelessWidget {
-  const SettingsScreen({super.key});
+  const SettingsScreen({super.key, required this.onRefreshEntitlements});
+
+  final Future<void> Function() onRefreshEntitlements;
 
   static const String _privacyUrl = 'https://example.com/privacy';
   static const String _termsUrl = 'https://example.com/terms';
@@ -58,6 +61,25 @@ class SettingsScreen extends StatelessWidget {
             onTap: () => _sendFeedback(),
           ),
           const Divider(color: Colors.white24),
+          _item(
+            context,
+            icon: Icons.block,
+            title: '広告非表示を購入',
+            onTap: () async {
+              await _purchaseRemoveAds(context);
+              await onRefreshEntitlements();
+            },
+          ),
+          _item(
+            context,
+            icon: Icons.restore,
+            title: '購入を復元',
+            onTap: () async {
+              await _restorePurchases(context);
+              await onRefreshEntitlements();
+            },
+          ),
+          const Divider(color: Colors.white24),
           const ListTile(
             title: Text('バージョン', style: TextStyle(color: Colors.white)),
             subtitle: Text('1.0.0', style: TextStyle(color: Colors.white54)),
@@ -98,5 +120,37 @@ class SettingsScreen extends StatelessWidget {
       },
     );
     await launchUrl(uri);
+  }
+
+  Future<void> _purchaseRemoveAds(BuildContext context) async {
+    try {
+      // Offeringから対象パッケージを取得（事前にRCダッシュボードで設定）
+      final offerings = await Purchases.getOfferings();
+      final current = offerings.current;
+      if (current == null) return;
+      // 一番上のパッケージを仮に対象とする（本番はID指定を推奨）
+      final package = current.availablePackages.first;
+      await Purchases.purchasePackage(package);
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('購入が完了しました。')));
+    } catch (e) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('購入に失敗しました: $e')));
+    }
+  }
+
+  Future<void> _restorePurchases(BuildContext context) async {
+    try {
+      await Purchases.restorePurchases();
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('購入情報を復元しました。')));
+    } catch (e) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('復元に失敗しました: $e')));
+    }
   }
 }
